@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Quickline Management Africa - Professional property management and rental services."
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <title>Quickline Management Africa | Sign in</title>
+
+    <link
+        rel="stylesheet"
+        href="frontend\style.css"
+    >
+
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <img
+                    src="frontend\images\logo.png"
+                    alt="Quickline Management Africa Logo"
+                >
+            </div>
+            <ul class="nav-links">
+                <li><a href="Home.html">Home</a></li>
+                <li><a href="register.html">sign up</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Welcome to Quickline Management Africa</h1>
+        <p>Your trusted partner in property management and rental services.</p>
+      
+  <div class="card">
+    <p class="brand">Welcome</p>
+    <p class="sub" id="subline">Sign in to pick up where you left off.</p>
+
+    <div class="tabs" data-mode="login" id="tabs">
+      <button class="tab" id="tab-login" role="tab" aria-selected="true" aria-controls="panel-login">Log in</button>
+      <button class="tab" id="tab-signup" role="tab" aria-selected="false" aria-controls="panel-signup">Sign up</button>
+      <span class="indicator" aria-hidden="true"></span>
+    </div>
+
+    <div class="stage" id="stage">
+      <form class="panel" id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+        <div class="field">
+          <label for="li-email">Email</label>
+          <input id="li-email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="li-pass">Password</label>
+          <input id="li-pass" type="password" autocomplete="current-password" required>
+        </div>
+        <div class="row-between">
+          <label style="display:flex; align-items:center; gap:6px; margin:0;">
+            <input type="checkbox" style="width:auto;"> Remember me
+          </label>
+          <button type="button" class="link">Forgot password?</button>
+        </div>
+        <button type="submit" class="submit">Log in</button>
+        <p class="status" id="status-login" aria-live="polite"></p>
+      </form>
+
+      <form class="panel" id="panel-signup" role="tabpanel" aria-labelledby="tab-signup">
+        <div class="field">
+          <label for="su-name">Full name</label>
+          <input id="su-name" type="text" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="su-email">Email</label>
+          <input id="su-email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="su-pass">Password</label>
+          <input id="su-pass" type="password" autocomplete="new-password" required minlength="8">
+        </div>
+        <button type="submit" class="submit">Create account</button>
+        <p class="status" id="status-signup" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <p class="switch-line" id="switchLine">
+      New here? <button class="link" id="toSignup">Create an account</button>
+    </p>
+  </div>
+
+<script>
+  const tabs = document.getElementById('tabs');
+  const tabLogin = document.getElementById('tab-login');
+  const tabSignup = document.getElementById('tab-signup');
+  const subline = document.getElementById('subline');
+  const switchLine = document.getElementById('switchLine');
+
+  function setMode(mode) {
+    tabs.setAttribute('data-mode', mode);
+    const isLogin = mode === 'login';
+    tabLogin.setAttribute('aria-selected', String(isLogin));
+    tabSignup.setAttribute('aria-selected', String(!isLogin));
+    subline.textContent = isLogin
+      ? 'Sign in to pick up where you left off.'
+      : 'Create an account to get started.';
+    switchLine.innerHTML = isLogin
+      ? 'New here? <button class="link" id="toSignup">Create an account</button>'
+      : 'Already have an account? <button class="link" id="toLogin">Log in</button>';
+    bindSwitchLine();
+    const focusTarget = document.querySelector(
+      isLogin ? '#panel-login input' : '#panel-signup input'
+    );
+    if (focusTarget) setTimeout(() => focusTarget.focus(), 200);
+  }
+
+  function bindSwitchLine() {
+    const toSignup = document.getElementById('toSignup');
+    const toLogin = document.getElementById('toLogin');
+    if (toSignup) toSignup.addEventListener('click', () => setMode('signup'));
+    if (toLogin) toLogin.addEventListener('click', () => setMode('login'));
+  }
+
+  tabLogin.addEventListener('click', () => setMode('login'));
+  tabSignup.addEventListener('click', () => setMode('signup'));
+  bindSwitchLine();
+
+  document.getElementById('panel-login').addEventListener('submit', (e) => {
+    e.preventDefault();
+    document.getElementById('status-login').textContent = 'Logged in (demo only — no backend connected).';
+  });
+  document.getElementById('panel-signup').addEventListener('submit', (e) => {
+    e.preventDefault();
+    document.getElementById('status-signup').textContent = 'Account created (demo only — no backend connected).';
+  });
+</script>
+<script src="frontend\login.jsx"></script>
+</body>
+</html>
+
+
+</body>
