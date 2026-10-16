@@ -1,4 +1,56 @@
 import pool from "../config/db.js";
+import {
+    getListingLocationIntelligence as readLocationIntelligence,
+    refreshListingLocationIntelligence as refreshLocationIntelligenceData
+} from "../services/open-data-intelligence.service.js";
+
+export const getLocationIntelligence = async (req, res) => {
+    const listingId = Number(req.params.id);
+    if (!Number.isInteger(listingId) || listingId < 1) {
+        return res.status(400).json({
+            success: false,
+            message: "A valid listing ID is required."
+        });
+    }
+    try {
+        const intelligence = await readLocationIntelligence(listingId);
+        return res.json({ success: true, intelligence });
+    } catch (error) {
+        console.error("GET LISTING LOCATION INTELLIGENCE ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to retrieve location intelligence."
+        });
+    }
+};
+
+export const refreshLocationIntelligence = async (req, res) => {
+    const listingId = Number(req.params.id);
+    if (!Number.isInteger(listingId) || listingId < 1) {
+        return res.status(400).json({
+            success: false,
+            message: "A valid listing ID is required."
+        });
+    }
+    try {
+        const intelligence = await refreshLocationIntelligenceData(listingId);
+        return res.json({
+            success: true,
+            message: "OpenStreetMap location intelligence refreshed.",
+            intelligence
+        });
+    } catch (error) {
+        console.error("REFRESH LISTING LOCATION INTELLIGENCE ERROR:", error);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.statusCode === 400 || error.statusCode === 404
+                ? error.message
+                : error.statusCode === 502
+                    ? "OpenStreetMap could not provide nearby location data."
+                    : "Unable to refresh location intelligence."
+        });
+    }
+};
 
 /**
  * GET /api/listings
@@ -12,6 +64,7 @@ export const getListings = async (req, res) => {
             listing_purpose,
             city,
             county,
+            country,
             neighborhood,
             min_price,
             max_price,
@@ -32,42 +85,48 @@ export const getListings = async (req, res) => {
 
         // Status
         if (status) {
-            conditions.push(`listing_status = $${param}`);
+            conditions.push(`listing.listing_status = $${param}`);
             values.push(status);
             param++;
         }
 
         // Property type
         if (property_type) {
-            conditions.push(`property_type = $${param}`);
+            conditions.push(`listing.property_type = $${param}`);
             values.push(property_type);
             param++;
         }
 
         // Rent / sale
         if (listing_purpose) {
-            conditions.push(`listing_purpose = $${param}`);
+            conditions.push(`listing.listing_purpose = $${param}`);
             values.push(listing_purpose);
             param++;
         }
 
         // City
         if (city) {
-            conditions.push(`LOWER(city) = LOWER($${param})`);
+            conditions.push(`LOWER(listing.city) = LOWER($${param})`);
             values.push(city);
             param++;
         }
 
         // County
         if (county) {
-            conditions.push(`LOWER(county) = LOWER($${param})`);
+            conditions.push(`LOWER(listing.county) = LOWER($${param})`);
             values.push(county);
+            param++;
+        }
+
+        if (country) {
+            conditions.push(`LOWER(listing.country) = LOWER($${param})`);
+            values.push(country);
             param++;
         }
 
         // Neighborhood
         if (neighborhood) {
-            conditions.push(`LOWER(neighborhood) LIKE LOWER($${param})`);
+            conditions.push(`LOWER(listing.neighborhood) LIKE LOWER($${param})`);
             values.push(`%${neighborhood}%`);
             param++;
         }
@@ -76,11 +135,12 @@ export const getListings = async (req, res) => {
         if (search) {
             conditions.push(`
                 (
-                    LOWER(title) LIKE LOWER($${param})
-                    OR LOWER(description) LIKE LOWER($${param})
-                    OR LOWER(city) LIKE LOWER($${param})
-                    OR LOWER(neighborhood) LIKE LOWER($${param})
-                    OR LOWER(address) LIKE LOWER($${param})
+                    LOWER(listing.title) LIKE LOWER($${param})
+                    OR LOWER(listing.description) LIKE LOWER($${param})
+                    OR LOWER(listing.city) LIKE LOWER($${param})
+                    OR LOWER(listing.country) LIKE LOWER($${param})
+                    OR LOWER(listing.neighborhood) LIKE LOWER($${param})
+                    OR LOWER(listing.address) LIKE LOWER($${param})
                 )
             `);
 
@@ -90,42 +150,42 @@ export const getListings = async (req, res) => {
 
         // Minimum price
         if (min_price) {
-            conditions.push(`price >= $${param}`);
+            conditions.push(`listing.price >= $${param}`);
             values.push(Number(min_price));
             param++;
         }
 
         // Maximum price
         if (max_price) {
-            conditions.push(`price <= $${param}`);
+            conditions.push(`listing.price <= $${param}`);
             values.push(Number(max_price));
             param++;
         }
 
         // Bedrooms
         if (bedrooms) {
-            conditions.push(`bedrooms >= $${param}`);
+            conditions.push(`listing.bedrooms >= $${param}`);
             values.push(Number(bedrooms));
             param++;
         }
 
         // Bathrooms
         if (bathrooms) {
-            conditions.push(`bathrooms >= $${param}`);
+            conditions.push(`listing.bathrooms >= $${param}`);
             values.push(Number(bathrooms));
             param++;
         }
 
         // Furnished
         if (furnished !== undefined) {
-            conditions.push(`furnished = $${param}`);
+            conditions.push(`listing.furnished = $${param}`);
             values.push(furnished === "true");
             param++;
         }
 
         // Featured
         if (featured !== undefined) {
-            conditions.push(`featured = $${param}`);
+            conditions.push(`listing.featured = $${param}`);
             values.push(featured === "true");
             param++;
         }
@@ -136,28 +196,28 @@ export const getListings = async (req, res) => {
                 : "";
 
         // Sorting
-        let orderBy = "published_at DESC";
+        let orderBy = "listing.published_at DESC";
 
         switch (sort) {
             case "price_low":
-                orderBy = "price ASC";
+                orderBy = "listing.price ASC NULLS LAST";
                 break;
 
             case "price_high":
-                orderBy = "price DESC";
+                orderBy = "listing.price DESC NULLS LAST";
                 break;
 
             case "oldest":
-                orderBy = "published_at ASC";
+                orderBy = "listing.published_at ASC";
                 break;
 
             case "featured":
-                orderBy = "featured DESC, published_at DESC";
+                orderBy = "listing.featured DESC, listing.published_at DESC";
                 break;
 
             case "newest":
             default:
-                orderBy = "published_at DESC";
+                orderBy = "listing.published_at DESC";
         }
 
         const pageNumber = Math.max(Number(page), 1);
@@ -173,31 +233,57 @@ export const getListings = async (req, res) => {
 
         const query = `
             SELECT
-                id,
-                property_id,
-                title,
-                description,
-                property_type,
-                listing_purpose,
-                listing_status,
-                city,
-                county,
-                neighborhood,
-                address,
-                latitude,
-                longitude,
-                price,
-                currency,
-                bedrooms,
-                bathrooms,
-                floor_area,
-                furnished,
-                available_from,
-                featured,
-                published_at,
-                created_at,
-                updated_at
-            FROM property_listings
+                listing.id,
+                listing.property_id,
+                listing.title,
+                listing.description,
+                listing.property_type,
+                listing.listing_purpose,
+                listing.listing_status,
+                listing.city,
+                listing.county,
+                listing.country,
+                listing.neighborhood,
+                listing.address,
+                listing.latitude,
+                listing.longitude,
+                listing.price,
+                listing.currency,
+                listing.bedrooms,
+                listing.bathrooms,
+                listing.floor_area,
+                listing.furnished,
+                listing.available_from,
+                listing.featured,
+                COALESCE(
+                    listing.image_url,
+                    listing_image.image_url,
+                    property_image.image_url
+                ) AS image_url,
+                listing.payment_terms,
+                listing.source_platform,
+                listing.source_url,
+                CONCAT_WS(' ', marketer.first_name, marketer.last_name) AS marketer_name,
+                listing.published_at,
+                listing.created_at,
+                listing.updated_at
+            FROM property_listings AS listing
+            LEFT JOIN LATERAL (
+                SELECT image_url
+                FROM property_listing_images
+                WHERE listing_id = listing.id
+                ORDER BY is_primary DESC, display_order ASC, id ASC
+                LIMIT 1
+            ) AS listing_image ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT image_url
+                FROM property_images
+                WHERE property_id = listing.property_id
+                ORDER BY is_primary DESC, id ASC
+                LIMIT 1
+            ) AS property_image ON TRUE
+            LEFT JOIN users AS marketer
+                ON marketer.id = listing.marketer_id
             ${whereClause}
             ORDER BY ${orderBy}
             LIMIT $${limitParam}
@@ -211,7 +297,7 @@ export const getListings = async (req, res) => {
 
         const countQuery = `
             SELECT COUNT(*) AS total
-            FROM property_listings
+            FROM property_listings AS listing
             ${whereClause}
         `;
 
@@ -253,6 +339,7 @@ export const getListingById = async (req, res) => {
             SELECT *
             FROM property_listings
             WHERE id = $1
+              AND listing_status = 'active'
             `,
             [id]
         );

@@ -6,8 +6,8 @@ export const getListingImages = async (req, res) => {
 
         const result = await pool.query(
             `
-            SELECT *
-                  id,
+            SELECT
+                id,
                 listing_id,
                 image_url,
                 thumbnail_url,

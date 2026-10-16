@@ -2,6 +2,7 @@ import express from "express";
 
 import {
     createProperty,
+    createPropertyListing,
     getProperties,
     getProperty,
     updateProperty,
@@ -12,9 +13,17 @@ import {
     authenticate,
     authorize
 } from "../middleware/auth.middleware.js";
+import uploadPropertyImages from "../middleware/property-upload.middleware.js";
 
 const router = express.Router();
 
+router.post(
+    "/marketplace",
+    authenticate,
+    authorize("landlord"),
+    uploadPropertyImages.array("images", 8),
+    createPropertyListing
+);
 
 // Create property
 router.post(

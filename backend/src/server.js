@@ -8,6 +8,8 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ==========================================
 // EXISTING ROUTES
@@ -24,6 +26,9 @@ import chargeRoutes from "./routes/charge.routes.js";
 import listingRoutes from "./routes/listing.routes.js";
 import listingImageRoutes from "./routes/listing.image.routes.js";
 import rentChargeRoutes from "./routes/rent-charge.routes.js";
+import maintenanceRoutes from "./routes/maintenance.routes.js";
+import marketerRoutes from "./routes/marketer.routes.js";
+import serviceRoutes from "./routes/service.routes.js";
 // ==========================================
 // MPESA / DARAJA ROUTES
 // ==========================================
@@ -39,6 +44,7 @@ import mpesaRoutes from "./routes/mpesa.routes.js";
 const app = express();
 
 const PORT = Number(process.env.PORT || 5000);
+const uploadsDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "uploads");
 
 
 // ==========================================
@@ -48,6 +54,10 @@ const PORT = Number(process.env.PORT || 5000);
 app.use(cors());
 
 app.use(express.json());
+app.use("/uploads", express.static(uploadsDirectory, {
+    immutable: true,
+    maxAge: "1y"
+}));
 
 app.use(express.urlencoded({
     extended: true
@@ -124,6 +134,11 @@ app.use("/api/listings", listingRoutes);
 // Property Listing Images
 app.use("/api/listings", listingImageRoutes);
 
+// Maintenance Requests
+app.use("/api/maintenance", maintenanceRoutes);
+app.use("/api/marketer", marketerRoutes);
+app.use("/api/services", serviceRoutes);
+
 // ==========================================
 // SAFARICOM DARAJA
 // ==========================================
@@ -195,12 +210,16 @@ app.use((req, res) => {
 
 });
 
+app.use((req, res) => {
+  console.log(`404 Hit for: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ error: `Route not found: ${req.originalUrl}` });
+});
 
 // ==========================================
 // GLOBAL ERROR HANDLER
 // ==========================================
 
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
 
     console.error("GLOBAL SERVER ERROR:");
     console.error(err);
@@ -236,6 +255,9 @@ app.listen(PORT, () => {
     console.log("Units:       /api/properties/:propertyId/units");
     console.log("Leases:      /api/leases");
     console.log("Payments:    /api/payments");
+    console.log("Marketplace: /api/listings");
+    console.log("Marketers:   /api/marketer");
+    console.log("Services:    /api/services");
 
     console.log("----------------------------------------------");
     console.log("MPESA / DARAJA ROUTES");
